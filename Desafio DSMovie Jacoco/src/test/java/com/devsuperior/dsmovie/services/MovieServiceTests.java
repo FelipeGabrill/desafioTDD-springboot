@@ -21,6 +21,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import com.devsuperior.dsmovie.dto.MovieDTO;
 import com.devsuperior.dsmovie.entities.MovieEntity;
 import com.devsuperior.dsmovie.repositories.MovieRepository;
+import com.devsuperior.dsmovie.services.exceptions.ResourceNotFoundException;
 import com.devsuperior.dsmovie.tests.MovieFactory;
 
 @ExtendWith(SpringExtension.class)
@@ -51,6 +52,8 @@ public class MovieServiceTests {
 		page = new PageImpl<>(List.of(movie));
 		
 		Mockito.when(repository.searchByTitle(any(), (Pageable)any())).thenReturn(page);
+		Mockito.when(repository.findById(existingMovieId)).thenReturn(Optional.of(movie));
+		Mockito.when(repository.findById(nonExistingMovieId)).thenReturn(Optional.empty());
 	}
 	
 	@Test
@@ -67,10 +70,19 @@ public class MovieServiceTests {
 	
 	@Test
 	public void findByIdShouldReturnMovieDTOWhenIdExists() {
+		MovieDTO result = service.findById(existingMovieId);
+		
+		Assertions.assertNotNull(result);
+		Assertions.assertEquals(result.getId(), existingMovieId);
+		Assertions.assertEquals(result.getTitle(), movieTitle);
 	}
 	
 	@Test
 	public void findByIdShouldThrowResourceNotFoundExceptionWhenIdDoesNotExist() {
+	
+		Assertions.assertThrows(ResourceNotFoundException.class, () -> {
+			service.findById(nonExistingMovieId);
+		});
 	}
 	
 	@Test
