@@ -2,6 +2,7 @@ package com.devsuperior.dsmovie.services;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +21,7 @@ import com.devsuperior.dsmovie.projections.UserDetailsProjection;
 import com.devsuperior.dsmovie.repositories.UserRepository;
 import com.devsuperior.dsmovie.tests.UserDetailsFactory;
 import com.devsuperior.dsmovie.tests.UserFactory;
+import com.devsuperior.dsmovie.utils.CustomUserUtil;
 
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration
@@ -30,6 +32,9 @@ public class UserServiceTests {
 	
 	@Mock
 	private UserRepository userRepository;
+	
+	@Mock
+	private CustomUserUtil customUserUtil;
 	
 	private String existingUsername, nonExistingUsername;
 	private UserEntity user;
@@ -43,16 +48,34 @@ public class UserServiceTests {
 		user = UserFactory.createUserEntity();
 		userDetails = UserDetailsFactory.createCustomAdminClientUser(existingUsername);
 		
+		Mockito.when(userRepository.findByUsername(existingUsername)).thenReturn(Optional.of(user));
+		Mockito.when(userRepository.findByUsername(nonExistingUsername)).thenReturn(Optional.empty());
+		
 		Mockito.when(userRepository.searchUserAndRolesByUsername(existingUsername)).thenReturn(userDetails);
 		Mockito.when(userRepository.searchUserAndRolesByUsername(nonExistingUsername)).thenReturn(new ArrayList<>());
+		
 	}
 	
 	@Test
 	public void authenticatedShouldReturnUserEntityWhenUserExists() {
+		
+		Mockito.when(customUserUtil.getLoggedUsername()).thenReturn(existingUsername);
+		
+		UserEntity result = service.authenticated();
+		
+		Assertions.assertNotNull(result);
+		Assertions.assertEquals(result.getUsername(), existingUsername);
+	
 	}
 
 	@Test
 	public void authenticatedShouldThrowUsernameNotFoundExceptionWhenUserDoesNotExists() {
+		
+		Mockito.doThrow(ClassCastException.class).when(customUserUtil).getLoggedUsername();
+		
+		Assertions.assertThrows(UsernameNotFoundException.class, () -> {
+			service.authenticated();
+		});
 	}
 
 	@Test
